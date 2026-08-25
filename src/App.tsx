@@ -38,6 +38,7 @@ import {
   Cell,
   Line,
   LineChart,
+  Legend,
   Pie,
   PieChart,
   ReferenceLine,
@@ -1416,6 +1417,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
   const [visual, setVisual] = useState<ExplorerVisual>("bar");
   const [drillSelections, setDrillSelections] = useState<{ field: ExplorerField; value: string }[]>([]);
   const [mobileTarget, setMobileTarget] = useState<ExplorerWell>("rows");
+  const [expandedAnalysis, setExpandedAnalysis] = useState(false);
 
   const fieldValues = useMemo<Record<string, string[]>>(
     () => ({
@@ -1448,26 +1450,12 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
   });
   const explorer = explorerQuery.data;
   const chartField: ExplorerField = rows[rows.length - 1] ?? columns[columns.length - 1] ?? "outlet";
-  const chartData = useMemo(() => {
-    const grouped = new Map<string, number>();
-    for (const row of explorer?.rows ?? []) {
-      const label = row.dimensions[chartField] ?? "Unknown";
-      grouped.set(label, (grouped.get(label) ?? 0) + row.value);
-    }
-    return [...grouped.entries()].map(([label, value]) => ({ label, value }));
-  }, [chartField, explorer?.rows]);
-  const isTimeSeries = TIME_FIELDS.includes(chartField);
-  const pieAvailable = !isTimeSeries && chartData.length > 0 && chartData.length <= 8;
   const formatValue = (amount: number) =>
     measure === "orders" || measure === "units" ? number.format(amount) : money.format(amount);
   const formatLabel = (value: string) =>
-    TIME_FIELDS.includes(chartField)
+    rows.length === 1 && TIME_FIELDS.includes(chartField)
       ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(new Date(`${value}-01`))
       : value;
-
-  useEffect(() => {
-    if ((visual === "pie" || visual === "donut") && !pieAvailable) setVisual(isTimeSeries ? "line" : "bar");
-  }, [isTimeSeries, pieAvailable, visual]);
 
   const relocateField = (well: ExplorerWell, field: ExplorerField) => {
     setRows((current) => current.filter((item) => item !== field));
@@ -1491,6 +1479,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
     }
   };
   const drillInto = (value: string) => {
+    if (rows.length !== 1) return;
     const next = DRILL_CHAIN[chartField];
     if (!next || rows.includes(next) || rows.length >= 4) return;
     setDrillSelections((current) => [...current, { field: chartField, value }]);
@@ -1533,6 +1522,42 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
     }
     return { rows: [...map.values()], columns: [...new Set([...map.values()].flatMap((row) => Object.keys(row.values)))], rowFields };
   }, [chartField, columns, explorer?.rows, rows]);
+  const chartSeries = pivotRows.columns.length ? pivotRows.columns : ["Value"];
+  const chartData = useMemo<Record<string, string | number>[]>(() => pivotRows.rows.map((row) => {
+    const values = Object.fromEntries(chartSeries.map((series) => [series, row.values[series] ?? 0]));
+    return {
+      label: pivotRows.rowFields.map((field) => row.labels[field] ?? "Unknown").join(" / "),
+      ...values,
+      value: chartSeries.reduce((total, series) => total + (row.values[series] ?? 0), 0),
+    };
+  }), [chartSeries, pivotRows]);
+  const displayedChartSeries = useMemo(() => {
+    if (chartSeries.length <= 8) return chartSeries;
+    const totals = new Map(chartSeries.map((series) => [series, 0]));
+    for (const row of chartData) {
+      chartSeries.forEach((series) => totals.set(series, (totals.get(series) ?? 0) + Number(row[series] ?? 0)));
+    }
+    return [...chartSeries]
+      .sort((left, right) => (totals.get(right) ?? 0) - (totals.get(left) ?? 0))
+      .slice(0, 7)
+      .concat("Other");
+  }, [chartData, chartSeries]);
+  const displayChartData = useMemo(() => chartData.map((row) => {
+    if (!displayedChartSeries.includes("Other")) return row;
+    const displayed = new Set(displayedChartSeries.filter((series) => series !== "Other"));
+    return {
+      ...row,
+      Other: chartSeries
+        .filter((series) => !displayed.has(series))
+        .reduce((total, series) => total + Number(row[series] ?? 0), 0),
+    };
+  }), [chartData, chartSeries, displayedChartSeries]);
+  const isTimeSeries = rows.length === 1 && TIME_FIELDS.includes(chartField);
+  const pieAvailable = columns.length === 0 && !isTimeSeries && chartData.length > 0 && chartData.length <= 8;
+
+  useEffect(() => {
+    if ((visual === "pie" || visual === "donut") && !pieAvailable) setVisual(isTimeSeries ? "line" : "bar");
+  }, [isTimeSeries, pieAvailable, visual]);
 
   useEffect(() => {
     const handleExport = (event: Event) => {
@@ -1554,6 +1579,26 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
     window.addEventListener("analytics-export-request", handleExport);
     return () => window.removeEventListener("analytics-export-request", handleExport);
   }, [dimensionsForPivot, explorer?.measure.label, explorer?.rows, measure]);
+
+  const renderPivotTable = () => <div className="explorer-pivot-wrap"><table className="explorer-pivot"><thead><tr>{pivotRows.rowFields.map((field) => <th key={field}>{fieldLabel(field)}</th>)}{pivotRows.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{pivotRows.rows.map((row, index) => <tr key={`${index}-${Object.values(row.labels).join("-")}`}>{pivotRows.rowFields.map((field) => <td key={field}>{row.labels[field]}</td>)}{pivotRows.columns.map((column) => <td key={column}>{formatValue(row.values[column] ?? 0)}</td>)}</tr>)}</tbody></table></div>;
+  const renderAnalysisVisual = (height: number) => (
+    <>
+      {(visual === "bar" || visual === "horizontalBar") && (
+        <ResponsiveContainer width="100%" height={height}>
+          <BarChart data={displayChartData} layout={visual === "horizontalBar" ? "vertical" : "horizontal"} margin={{ top: 14, right: 24, left: 12, bottom: 25 }} onClick={(entry) => { const label = (entry as { activeLabel?: string })?.activeLabel; if (label) drillInto(label); }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={visual === "horizontalBar"} horizontal={visual !== "horizontalBar"} stroke="#dbe5e5" />
+            {visual === "bar" ? <><XAxis dataKey="label" tick={{ fontSize: 12 }} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} /></> : <><XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} /><YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 12 }} /></>}
+            {chartTooltip}{columns.length > 0 && <Legend wrapperStyle={{ fontSize: 11 }} />}
+            {displayedChartSeries.map((series, index) => <Bar key={series} dataKey={series} name={series} fill={PALETTE[index % PALETTE.length]} radius={visual === "bar" ? [4, 4, 0, 0] : [0, 4, 4, 0]} isAnimationActive={false} />)}
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+      {visual === "line" && <ResponsiveContainer width="100%" height={height}><LineChart data={displayChartData} margin={{ top: 14, right: 24, left: 12, bottom: 25 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5e5" /><XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={20} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} />{chartTooltip}{columns.length > 0 && <Legend wrapperStyle={{ fontSize: 11 }} />}{displayedChartSeries.map((series, index) => <Line key={series} type="monotone" dataKey={series} name={series} stroke={PALETTE[index % PALETTE.length]} strokeWidth={3} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} />)}</LineChart></ResponsiveContainer>}
+      {visual === "area" && <ResponsiveContainer width="100%" height={height}><AreaChart data={displayChartData} margin={{ top: 14, right: 24, left: 12, bottom: 25 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5e5" /><XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={20} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} />{chartTooltip}{columns.length > 0 && <Legend wrapperStyle={{ fontSize: 11 }} />}{displayedChartSeries.map((series, index) => <Area key={series} type="monotone" dataKey={series} name={series} stroke={PALETTE[index % PALETTE.length]} strokeWidth={2} fill={PALETTE[index % PALETTE.length]} fillOpacity={columns.length > 0 ? 0.22 : 0.55} isAnimationActive={false} />)}</AreaChart></ResponsiveContainer>}
+      {(visual === "pie" || visual === "donut") && <ResponsiveContainer width="100%" height={height}><PieChart><Pie data={chartData} dataKey="value" nameKey="label" innerRadius={visual === "donut" ? 78 : 0} outerRadius={126} paddingAngle={2} isAnimationActive={false} labelLine={{ stroke: "#94a3b8" }} label={({ name, percent }) => name && percent !== undefined ? `${name} ${Math.round(percent * 100)}%` : ""} onClick={(entry) => { const label = (entry as { name?: string })?.name; if (label) drillInto(label); }}>{chartData.map((row, index) => <Cell key={row.label} fill={PALETTE[index % PALETTE.length]} />)}</Pie><Tooltip formatter={(amount: number) => formatValue(amount)} /></PieChart></ResponsiveContainer>}
+      {visual === "table" && renderPivotTable()}
+    </>
+  );
 
   return (
     <section className={`explorer-page ${explorerQuery.isFetching ? "is-refreshing" : ""}`}>
@@ -1634,23 +1679,14 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
           <section className="explorer-result-panel">
             <div className="panel-heading">
               <div><p className="eyebrow">LIVE ANALYSIS</p><h2>{dimensionsForPivot.map(fieldLabel).join(" by ") || "Choose fields"}</h2></div>
-              <small>{explorer?.rows.length ?? 0} grouped results</small>
+              <div className="panel-actions">
+                <small>{explorer?.rows.length ?? 0} grouped results</small>
+                <button type="button" className="icon-button expand-button" onClick={() => setExpandedAnalysis(true)} title="Expand analysis" aria-label="Expand analysis"><Maximize2 size={16} /></button>
+              </div>
             </div>
             {explorerQuery.isLoading ? <LoadingState message="Running analysis..." detail="Grouping the selected fields from PostgreSQL." /> : explorerQuery.isError ? <div className="insight-error">{explorerQuery.error.message}</div> : (
               <>
-                {(visual === "bar" || visual === "horizontalBar") && (
-                  <ResponsiveContainer width="100%" height={430}>
-                    <BarChart data={chartData} layout={visual === "horizontalBar" ? "vertical" : "horizontal"} margin={{ top: 14, right: 24, left: 12, bottom: 25 }} onClick={(entry) => { const label = (entry as { activeLabel?: string })?.activeLabel; if (label) drillInto(label); }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={visual === "horizontalBar"} horizontal={visual !== "horizontalBar"} stroke="#dbe5e5" />
-                      {visual === "bar" ? <><XAxis dataKey="label" tick={{ fontSize: 12 }} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} /></> : <><XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} /><YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 12 }} /></>}
-                      {chartTooltip}<Bar dataKey="value" fill="#0f766e" radius={visual === "bar" ? [4, 4, 0, 0] : [0, 4, 4, 0]} isAnimationActive={false} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-                {visual === "line" && <ResponsiveContainer width="100%" height={430}><LineChart data={chartData} margin={{ top: 14, right: 24, left: 12, bottom: 25 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5e5" /><XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={20} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} />{chartTooltip}<Line type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={3} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} /></LineChart></ResponsiveContainer>}
-                {visual === "area" && <ResponsiveContainer width="100%" height={430}><AreaChart data={chartData} margin={{ top: 14, right: 24, left: 12, bottom: 25 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dbe5e5" /><XAxis dataKey="label" tick={{ fontSize: 12 }} minTickGap={20} tickFormatter={formatLabel} /><YAxis tick={{ fontSize: 12 }} tickFormatter={(amount) => compactRupees(amount)} />{chartTooltip}<Area type="monotone" dataKey="value" stroke="#0f766e" strokeWidth={2} fill="#99ded1" fillOpacity={0.55} isAnimationActive={false} /></AreaChart></ResponsiveContainer>}
-                {(visual === "pie" || visual === "donut") && <ResponsiveContainer width="100%" height={430}><PieChart><Pie data={chartData} dataKey="value" nameKey="label" innerRadius={visual === "donut" ? 78 : 0} outerRadius={126} paddingAngle={2} isAnimationActive={false} labelLine={{ stroke: "#94a3b8" }} label={({ name, percent }) => name && percent !== undefined ? `${name} ${Math.round(percent * 100)}%` : ""} onClick={(entry) => { const label = (entry as { name?: string })?.name; if (label) drillInto(label); }}>{chartData.map((row, index) => <Cell key={row.label} fill={PALETTE[index % PALETTE.length]} />)}</Pie><Tooltip formatter={(amount: number) => formatValue(amount)} /></PieChart></ResponsiveContainer>}
-                {visual === "table" && <div className="explorer-pivot-wrap"><table className="explorer-pivot"><thead><tr>{pivotRows.rowFields.map((field) => <th key={field}>{fieldLabel(field)}</th>)}{pivotRows.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{pivotRows.rows.map((row, index) => <tr key={`${index}-${Object.values(row.labels).join("-")}`}>{pivotRows.rowFields.map((field) => <td key={field}>{row.labels[field]}</td>)}{pivotRows.columns.map((column) => <td key={column}>{formatValue(row.values[column] ?? 0)}</td>)}</tr>)}</tbody></table></div>}
+                {renderAnalysisVisual(430)}
                 {chartData.length === 0 && <div className="empty-panel">No rows match this analysis. Remove a filter or choose another field.</div>}
               </>
             )}
@@ -1658,6 +1694,20 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
           <div className="explorer-drill-hint">Select a bar, slice, or table grouping to drill down. Use Back to return to the previous level.</div>
         </div>
       </section>
+      {expandedAnalysis && (
+        <ExpandedChartDialog
+          title={dimensionsForPivot.map(fieldLabel).join(" by ") || "Live analysis"}
+          onClose={() => setExpandedAnalysis(false)}
+        >
+          {renderAnalysisVisual(600)}
+          {chartSeries.length > 8 && visual !== "table" && (
+            <div className="expanded-analysis-table">
+              <p>Chart shows the seven largest series plus Other. The full pivot data is below.</p>
+              {renderPivotTable()}
+            </div>
+          )}
+        </ExpandedChartDialog>
+      )}
     </section>
   );
 }

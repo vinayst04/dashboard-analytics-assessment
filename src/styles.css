@@ -142,6 +142,8 @@ body, .app-shell { background: #fff7e6; color: #263724; }
 .chart-compatibility-note { max-width: 360px; margin: 0 0 1px auto; color: #856d37; font-size: 12px; line-height: 1.45; }
 .dashboard-content.is-refreshing, .explorer-page.is-refreshing { opacity: .52; }
 .dashboard-content.is-refreshing, .explorer-page.is-refreshing { transition: opacity .16s ease; }
+.expanded-analysis-table { margin-top: 18px; padding-top: 14px; border-top: 1px solid #ead8ad; }
+.expanded-analysis-table > p { margin: 0 0 10px; color: #725a2a; font-size: 12px; }
 
 /* Field-driven analysis workspace. */
 .explorer-page { display: grid; gap: 16px; }
@@ -379,19 +381,72 @@ body, .app-shell { background: #fff7e6; color: #263724; }
     min-height: 0;
   }
 
+  .app-footer {
+    margin-top: 18px;
+    padding: 0;
+  }
+  .footer-content {
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    gap: 7px;
+    padding: 0 10px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .footer-content > div {
+    width: auto;
+    align-items: center;
+    flex-direction: row;
+    gap: 7px;
+  }
+  .app-footer strong, .app-footer span, .app-footer small { font-size: 10px; }
+  .app-footer span { padding-left: 7px; }
+  .app-footer small { white-space: nowrap; }
+
   .explorer-builder { gap: 12px; }
   .desktop-builder-help { display: none; }
   .mobile-builder-help { display: block; text-align: right; }
   .field-library {
     order: 1;
-    padding: 12px 10px;
+    padding: 9px 8px;
   }
   .explorer-workbench { order: 2; }
-  .explorer-wells { gap: 8px; }
-  .explorer-well {
-    min-height: 74px;
-    padding: 9px;
+  .builder-section-heading { padding: 0 4px 8px; }
+  .field-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding-top: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+  .field-group::-webkit-scrollbar { display: none; }
+  .field-group > small {
+    flex: 0 0 96px;
+    font-size: 9px;
+  }
+  .field-library-item {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 29px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+  .field-library-item svg { width: 12px; height: 12px; }
+  .explorer-wells { gap: 8px; }
+  .explorer-wells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .explorer-well {
+    min-height: 67px;
+    padding: 7px;
+  }
+  .explorer-well:nth-child(3) { grid-column: 1 / -1; }
+  .measure-well { grid-column: 1 / -1; min-height: 62px; padding: 7px; }
+  .explorer-well-heading, .measure-well > span { font-size: 11px; white-space: nowrap; }
+  .explorer-well-content { min-height: 32px; padding-top: 5px; }
+  .explorer-field-chip { min-height: 24px; font-size: 10px; }
+  .explorer-field-chip button { width: 18px; height: 18px; }
   .explorer-well.is-active-target {
     border-style: solid;
     border-color: #0d633f;
