@@ -1,0 +1,33 @@
+{
+  "name": "business-analytics-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors red,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": ".\\.venv\\Scripts\\python.exe -m uvicorn api.index:app --host 127.0.0.1 --port 8000 --reload",
+    "dev:web": "vite --host 127.0.0.1 --port 5173",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.0",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^10.0.5",
+    "eslint": "^9.19.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "playwright": "^1.62.1",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}
