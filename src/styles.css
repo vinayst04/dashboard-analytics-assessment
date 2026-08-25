@@ -140,6 +140,8 @@ body, .app-shell { background: #fff7e6; color: #263724; }
 .expanded-chart-heading { border-bottom-color: #ead8ad; }.expanded-chart-heading h2 { color: #263724; }
 .icon-button:hover { background: #fff0c7; color: #0d633f; }.expand-button { color: #0d633f; }.expand-button:hover { color: #e72732; }
 .chart-compatibility-note { max-width: 360px; margin: 0 0 1px auto; color: #856d37; font-size: 12px; line-height: 1.45; }
+.dashboard-content.is-refreshing, .explorer-page.is-refreshing { opacity: .52; }
+.dashboard-content.is-refreshing, .explorer-page.is-refreshing { transition: opacity .16s ease; }
 
 /* Field-driven analysis workspace. */
 .explorer-page { display: grid; gap: 16px; }
@@ -213,7 +215,7 @@ body, .app-shell { background: #fff7e6; color: #263724; }
     width: calc(100% + 28px);
     margin: 0 -14px -8px;
     padding: 5px 14px 7px;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 5px;
     overflow-x: auto;
     border-top: 1px solid rgba(255, 245, 218, .28);
@@ -381,10 +383,10 @@ body, .app-shell { background: #fff7e6; color: #263724; }
   .desktop-builder-help { display: none; }
   .mobile-builder-help { display: block; text-align: right; }
   .field-library {
-    order: 2;
+    order: 1;
     padding: 12px 10px;
   }
-  .explorer-workbench { order: 1; }
+  .explorer-workbench { order: 2; }
   .explorer-wells { gap: 8px; }
   .explorer-well {
     min-height: 74px;

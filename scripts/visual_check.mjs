@@ -35,6 +35,9 @@ for (const [name, viewport] of Object.entries({ desktop: { width: 1440, height: 
   if (viewport.width < 760) {
     await page.getByRole('button', { name: /Detailed insights/i }).click()
     await page.locator('.explorer-page').waitFor()
+    const fieldsBox = await page.locator('.field-library').boundingBox()
+    const resultBox = await page.locator('.explorer-result-panel').boundingBox()
+    if (!fieldsBox || !resultBox || fieldsBox.y >= resultBox.y) throw new Error('Fields should appear above the visual on mobile.')
     const columnsWell = page.locator('.explorer-well').filter({ hasText: 'Columns' })
     await columnsWell.getByRole('button', { name: 'Add here' }).click()
     await page.getByRole('button', { name: 'Category' }).last().click()

@@ -1556,7 +1556,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
   }, [dimensionsForPivot, explorer?.measure.label, explorer?.rows, measure]);
 
   return (
-    <section className="explorer-page">
+    <section className={`explorer-page ${explorerQuery.isFetching ? "is-refreshing" : ""}`}>
       <section className="explorer-intro">
         <div>
           <p className="eyebrow">POWER BI STYLE EXPLORER</p>
