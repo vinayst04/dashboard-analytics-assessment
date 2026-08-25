@@ -288,3 +288,135 @@ body, .app-shell { background: #fff7e6; color: #263724; }
   .footer-content > div { align-items: flex-start; flex-direction: column; }
   .app-footer span { padding-left: 0; border-left: 0; }
 }
+
+/* Touch-first phone controls. These rules intentionally come last to override
+   older responsive declarations that expanded every filter into a full column. */
+.mobile-filter-toggle, .mobile-well-target { display: none; }
+.mobile-builder-help { display: none; }
+
+@media (max-width: 640px) {
+  .topbar {
+    gap: 6px 10px;
+    min-height: 54px;
+    padding: 6px 12px 0;
+  }
+  .brand-logo { width: 98px; height: 36px; }
+  .brand strong { display: none; }
+  .topbar-actions { align-self: center; }
+  .account-button { width: 34px; min-height: 34px; }
+  .topbar-nav {
+    width: calc(100% + 24px);
+    margin: 0 -12px;
+    padding: 5px 12px 6px;
+    gap: 6px;
+    border-top-color: rgba(255, 245, 218, .24);
+  }
+  .topbar-nav button {
+    min-height: 30px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+
+  .filter-bar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .filter-title { height: 32px; font-size: 13px; }
+  .mobile-filter-toggle {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 9px;
+    border: 1px solid #d5b565;
+    border-radius: 5px;
+    color: #0d633f;
+    background: #fffdf6;
+    font-size: 11px;
+    font-weight: 750;
+  }
+  .filter-controls {
+    display: none !important;
+    grid-column: 1 / -1;
+  }
+  .filter-bar.mobile-open .filter-controls {
+    display: flex !important;
+    align-items: flex-end;
+    flex-wrap: nowrap;
+    gap: 9px;
+    width: calc(100% + 20px);
+    margin: 1px -10px -9px;
+    padding: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border-top: 1px solid #ead8ad;
+    scrollbar-width: none;
+  }
+  .filter-bar.mobile-open .filter-controls::-webkit-scrollbar { display: none; }
+  .filter-bar.mobile-open .filter-controls > label {
+    flex: 0 0 145px;
+    width: 145px;
+  }
+  .filter-bar.mobile-open .filter-controls input,
+  .filter-bar.mobile-open .filter-controls select {
+    width: 145px;
+    min-height: 38px;
+  }
+  .filter-bar.mobile-open .filter-reset-button {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 38px;
+    margin: 0;
+  }
+  .filter-feedback {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
+  .explorer-builder { gap: 12px; }
+  .desktop-builder-help { display: none; }
+  .mobile-builder-help { display: block; text-align: right; }
+  .field-library {
+    order: 2;
+    padding: 12px 10px;
+  }
+  .explorer-workbench { order: 1; }
+  .explorer-wells { gap: 8px; }
+  .explorer-well {
+    min-height: 74px;
+    padding: 9px;
+  }
+  .explorer-well.is-active-target {
+    border-style: solid;
+    border-color: #0d633f;
+    box-shadow: 0 0 0 2px rgba(13, 99, 63, .10);
+  }
+  .mobile-well-target {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    margin-left: auto;
+    padding: 0 7px;
+    border: 1px solid #d5b565;
+    border-radius: 4px;
+    color: #0d633f;
+    background: #fffdf6;
+    font-size: 10px;
+    font-weight: 750;
+  }
+  .explorer-well.is-active-target .mobile-well-target {
+    border-color: #0d633f;
+    color: #fffdf6;
+    background: #0d633f;
+  }
+  .field-library-item {
+    min-height: 36px;
+    cursor: pointer;
+  }
+  .field-library-item:active { background: #fff0c7; }
+  .explorer-drop-hint { padding: 5px 2px; }
+}

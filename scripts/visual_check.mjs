@@ -22,11 +22,25 @@ for (const [name, viewport] of Object.entries({ desktop: { width: 1440, height: 
   if (!categoryFromChart) throw new Error('Clicking a category bar did not set the category filter.')
   await categoryPanel.locator('.recharts-wrapper').hover()
   if (await page.locator('.recharts-tooltip-cursor').count()) throw new Error('Chart hover cursor overlay is still present.')
-  if (viewport.width < 760) await page.getByTitle('Toggle filters').click()
+  if (viewport.width < 760) {
+    const controls = page.locator('#dashboard-filters')
+    if (await controls.isVisible()) throw new Error('Phone filters should stay collapsed until Edit is pressed.')
+    await page.getByRole('button', { name: 'Edit' }).click()
+    await controls.waitFor()
+  }
   await page.locator('select').nth(1).selectOption('Burgers')
   await page.waitForFunction((previous) => document.querySelector('.metric-card strong')?.textContent !== previous, revenueBefore)
   const revenueAfter = await page.locator('.metric-card strong').first().textContent()
   if (revenueBefore === revenueAfter) throw new Error('Category filtering did not update the dashboard metrics.')
+  if (viewport.width < 760) {
+    await page.getByRole('button', { name: /Detailed insights/i }).click()
+    await page.locator('.explorer-page').waitFor()
+    const columnsWell = page.locator('.explorer-well').filter({ hasText: 'Columns' })
+    await columnsWell.getByRole('button', { name: 'Add here' }).click()
+    await page.getByRole('button', { name: 'Category' }).last().click()
+    await page.waitForFunction(() => [...document.querySelectorAll('.explorer-well')]
+      .some((well) => well.textContent?.includes('Columns') && well.textContent?.includes('Category')))
+  }
   await page.screenshot({ path: join(outputDir, `${name}-live.png`), fullPage: true })
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }))
   checks.push({ name, dimensions, categoryFromChart, filtered: revenueBefore !== revenueAfter, consoleErrors })

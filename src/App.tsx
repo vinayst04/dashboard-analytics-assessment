@@ -397,6 +397,7 @@ export default function App() {
   const [insightsRequested, setInsightsRequested] = useState(false);
   const [authNotice, setAuthNotice] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const filtersQuery = useQuery({ queryKey: ["filters"], queryFn: getFilters });
   const accountQuery = useQuery({
     queryKey: ["account"],
@@ -635,14 +636,24 @@ export default function App() {
         </section>
 
         <section
-          className={`filter-bar ${filtersQuery.isLoading ? "is-loading" : ""}`}
+          className={`filter-bar ${filtersQuery.isLoading ? "is-loading" : ""} ${mobileFiltersOpen ? "mobile-open" : ""}`}
           aria-busy={filtersQuery.isLoading}
         >
           <div className="filter-title">
             <SlidersHorizontal size={18} />
             <span>Filters</span>
           </div>
-          <div className="filter-controls">
+          <button
+            type="button"
+            className="mobile-filter-toggle"
+            onClick={() => setMobileFiltersOpen((current) => !current)}
+            aria-expanded={mobileFiltersOpen}
+            aria-controls="dashboard-filters"
+          >
+            <SlidersHorizontal size={15} />
+            {mobileFiltersOpen ? "Done" : "Edit"}
+          </button>
+          <div className="filter-controls" id="dashboard-filters">
             <label>
               From
               <input
@@ -1351,6 +1362,8 @@ function ExplorerWell({
   well,
   onDrop,
   onRemove,
+  isActiveTarget,
+  onSelectTarget,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -1358,10 +1371,12 @@ function ExplorerWell({
   well: ExplorerWell;
   onDrop: (well: ExplorerWell, event: DragEvent<HTMLDivElement>) => void;
   onRemove: (well: ExplorerWell, field: ExplorerField) => void;
+  isActiveTarget?: boolean;
+  onSelectTarget?: (well: ExplorerWell) => void;
 }) {
   return (
     <div
-      className="explorer-well"
+      className={`explorer-well ${isActiveTarget ? "is-active-target" : ""}`}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onDrop(well, event)}
     >
@@ -1369,6 +1384,11 @@ function ExplorerWell({
         <span>{icon}</span>
         <strong>{title}</strong>
         {well === "filters" && <small>optional</small>}
+        {onSelectTarget && (
+          <button type="button" className="mobile-well-target" onClick={() => onSelectTarget(well)}>
+            {isActiveTarget ? "Selected" : "Add here"}
+          </button>
+        )}
       </div>
       <div className="explorer-well-content">
         {fields.length === 0 ? (
@@ -1395,6 +1415,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
   const [measure, setMeasure] = useState<ExplorerMeasure>("revenue");
   const [visual, setVisual] = useState<ExplorerVisual>("bar");
   const [drillSelections, setDrillSelections] = useState<{ field: ExplorerField; value: string }[]>([]);
+  const [mobileTarget, setMobileTarget] = useState<ExplorerWell>("rows");
 
   const fieldValues = useMemo<Record<string, string[]>>(
     () => ({
@@ -1548,7 +1569,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
       </section>
       <section className="explorer-builder">
         <aside className="field-library">
-          <div className="builder-section-heading"><strong>Fields</strong><small>Drag to a well</small></div>
+          <div className="builder-section-heading"><strong>Fields</strong><small className="desktop-builder-help">Drag to a well</small><small className="mobile-builder-help">Choose a destination, then tap a field</small></div>
           {["Sales structure", "Date hierarchy"].map((group) => (
             <div key={group} className="field-group">
               <small>{group}</small>
@@ -1559,7 +1580,7 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
                   className="field-library-item"
                   draggable
                   onDragStart={(event) => event.dataTransfer.setData("text/plain", field.key)}
-                  onClick={() => relocateField("rows", field.key)}
+                  onClick={() => relocateField(mobileTarget, field.key)}
                 >
                   <GripVertical size={14} /><span>{field.label}</span>
                 </button>
@@ -1569,9 +1590,9 @@ function DetailedInsights({ dashboard, filters }: { dashboard: DashboardData; fi
         </aside>
         <div className="explorer-workbench">
           <div className="explorer-wells">
-            <ExplorerWell title="Rows" icon={<Rows3 size={15} />} fields={rows} well="rows" onDrop={handleDrop} onRemove={removeField} />
-            <ExplorerWell title="Columns" icon={<Columns3 size={15} />} fields={columns} well="columns" onDrop={handleDrop} onRemove={removeField} />
-            <ExplorerWell title="Filters" icon={<Filter size={15} />} fields={filterFields} well="filters" onDrop={handleDrop} onRemove={removeField} />
+            <ExplorerWell title="Rows" icon={<Rows3 size={15} />} fields={rows} well="rows" onDrop={handleDrop} onRemove={removeField} isActiveTarget={mobileTarget === "rows"} onSelectTarget={setMobileTarget} />
+            <ExplorerWell title="Columns" icon={<Columns3 size={15} />} fields={columns} well="columns" onDrop={handleDrop} onRemove={removeField} isActiveTarget={mobileTarget === "columns"} onSelectTarget={setMobileTarget} />
+            <ExplorerWell title="Filters" icon={<Filter size={15} />} fields={filterFields} well="filters" onDrop={handleDrop} onRemove={removeField} isActiveTarget={mobileTarget === "filters"} onSelectTarget={setMobileTarget} />
             <label className="measure-well">
               <span><Table2 size={15} /> Values</span>
               <select value={measure} onChange={(event) => setMeasure(event.target.value as ExplorerMeasure)}>
